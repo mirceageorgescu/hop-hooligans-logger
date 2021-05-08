@@ -1,82 +1,51 @@
-function showURL() {
-  var cpService = getCloudPrintService();
-  if (!cpService.hasAccess()) {
-    Logger.log(cpService.getAuthorizationUrl());
+function doGet(e) { 
+  Logger.log( JSON.stringify(e) );  // view parameters
+  var result = 'Ok'; // assume success
+  if (e.parameter == 'undefined') {
+    result = 'No Parameters';
   }
-}
-
-function getCloudPrintService() {
-  return OAuth2.createService('print')
-    .setAuthorizationBaseUrl('https://accounts.google.com/o/oauth2/auth')
-    .setTokenUrl('https://accounts.google.com/o/oauth2/token')
-    .setClientId('### Client ID ##')
-    .setClientSecret('### Client secret ###')
-    .setCallbackFunction('authCallback')
-    .setPropertyStore(PropertiesService.getUserProperties())
-    .setScope('https://www.googleapis.com/auth/cloudprint')
-    .setParam('login_hint', Session.getActiveUser().getEmail())
-    .setParam('access_type', 'offline')
-    .setParam('approval_prompt', 'force');
-}
-
-function authCallback(request) {
-  var isAuthorized = getCloudPrintService().handleCallback(request);
-  if (isAuthorized) {
-    return HtmlService.createHtmlOutput('You can now use Google Cloud Print from Apps Script.');
-  } else {
-    return HtmlService.createHtmlOutput('Cloud Print Error: Access Denied');
-  }
-}
-
-function printGoogleDocument(docID, printerID, docName) {
-  var ticket = {
-    version: "1.0",
-    print: {
-      color: {
-        type: "STANDARD_COLOR",
-        vendor_id: "Color"
-      },
-      duplex: {
-        type: "NO_DUPLEX"
+  else {
+    var sheet_id = '1LYgk3DTioQEZ8bXRQ_FzgyuSjljQnK51Pbf__i4cEMY';    // Spreadsheet ID
+    var sheet = SpreadsheetApp.openById(sheet_id).getActiveSheet();   // get Active sheet
+    var newRow = sheet.getLastRow() + 1;            
+    var rowData = [];
+    rowData[0] = Utilities.formatDate(new Date(), "GMT+3", "MMM dd, YYYY") + ' at ' + Utilities.formatDate(new Date(), "GMT+3", "hh:mm:ss a"); // Timestamp in column A
+    for (var param in e.parameter) {
+      Logger.log('In for loop, param=' + param);
+      var value = stripQuotes(e.parameter[param]);
+      Logger.log(param + ':' + e.parameter[param]);
+      switch (param) {
+        case 'sensor': //Parameter
+          rowData[1] = value;
+          result += ', Written sensor';
+          break;
+        case 'temperature': //Parameter
+          rowData[2] = value; //Value in column B
+          result += ', Written temperature';
+          break;
+        case 'humidity': //Parameter
+          rowData[3] = value; //Value in column C
+          result += ', Written humidity';
+          break;
+        case 'battery': //Parameter
+          rowData[4] = value; //Value in column D
+          result += ', Written battery';
+          break;  
+        default:
+          result = +"unsupported parameter";
       }
     }
-  };
-
-  var payload = {
-    "printerid" : printerID,
-    "title"     : docName,
-    "content"   : DriveApp.getFileById(docID).getBlob(),
-    "contentType": "application/pdf",
-    "ticket"    : JSON.stringify(ticket)
-  };
-
-  var response = UrlFetchApp.fetch('https://www.google.com/cloudprint/submit', {
-    method: "POST",
-    payload: payload,
-    headers: {
-      Authorization: 'Bearer ' + getCloudPrintService().getAccessToken()
-    },
-    "muteHttpExceptions": true
-  });
-
-  response = JSON.parse(response);
-
-  if (response.success) {
-    Logger.log("%s", response.message);
-  } else {
-    Logger.log("Error Code: %s %s", response.errorCode, response.message);
+    Logger.log(JSON.stringify(rowData));
+    // Write new row below
+    var newRange = sheet.getRange(newRow, 1, 1, rowData.length);
+    newRange.setValues([rowData]);
   }
+  // Return result of operation
+  return ContentService.createTextOutput(result);
 }
-
-function print() {
-  printGoogleDocument('### Doc ID ###', '### Printer ID ###', 'Monitorizare');
-  clearOldData();
-}
-
-function clearOldData(){
-  SpreadsheetApp.getActive().getSheetByName('Camera frigorifica').getRange('A3:D15').clearContent();
-  SpreadsheetApp.getActive().getSheetByName('Materie prima').getRange('A3:D15').clearContent();
-  SpreadsheetApp.getActive().getSheetByName('Frigider hamei').getRange('A3:D15').clearContent();
-  SpreadsheetApp.getActive().getSheetByName('Frigider drojdie').getRange('A3:D15').clearContent();
-  SpreadsheetApp.getActive().getSheetByName('Ventilatie').getRange('A3:D100').clearContent();
+/**
+* Remove leading and trailing single or double quotes
+*/
+function stripQuotes( value ) {
+  return value.replace(/^["']|['"]$/g, "");
 }
