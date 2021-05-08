@@ -1,5 +1,4 @@
 #include <ESP8266WiFi.h>
-#include <Adafruit_Sensor.h>
 #include <DHT.h>
 
 const int httpsPort = 443;
@@ -11,8 +10,7 @@ const char* password = "arbustului29";
 
 // Replace with your google drive data
 const char* host = "script.google.com";
-String GAS_ID = "AKfycbw4U2Gfj8uBKuj_qj7DkniND6_bmMcDXgzH8ljRZ5hW1QiPbHnHwYCTkSHbqM5pdEIa";  // Replace with your GAS service id
-String SENSOR = "materie_prima"; //replace with your sensor ID
+String GAS_ID = "AKfycbx3iqGy1P-dqe3yM0ApEYBJddWE2eCKxukfqM3n7T4GPzNJTD7PJWFwBE4PT895ZMOw";  // Replace with your GAS service id
 
 // Time to sleep
 uint64_t uS_TO_S_FACTOR = 1000000;  // Conversion factor for micro seconds to seconds
@@ -109,7 +107,7 @@ void sendData(float temperature, float humidity, float battery) {
     Serial.println("certificate doesn't match");
   }
   
-  String url = "/macros/s/" + GAS_ID + "/exec?temperature=" + String(temperature) + "&humidity=" + String(humidity) + "&battery=" + String(battery)+ "&sensor=" + SENSOR;
+  String url = "/macros/s/" + GAS_ID + "/exec?temperature=" + String(temperature) + "&humidity=" + String(humidity) + "&battery=" + String(battery);
 
   client.print(String("GET ") + url + " HTTP/1.1\r\n" +
          "Host: " + host + "\r\n" +
